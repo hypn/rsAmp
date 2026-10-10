@@ -1,6 +1,6 @@
 # rsAmp
 
-![rsAmp](assets/rsamp.png)
+![rsAmp](assets/rsAmp.png)
 
 A classic-style music player vibe coded in Rust, for Windows, Linux and macOS.
 It loads `.wsz` [skins](https://skins.webamp.org/) made for Winamp 2.x and draws them pixel for pixel.
@@ -30,8 +30,8 @@ it onto rsAmp to get the look and feel you expect :P
 Run it and drag and drop music files or folders onto it (`.mp3`, `.flac`, `.ogg`, `.wav`,
 `.m4a`), or playlists (`.m3u`, `.pls`, VLC's `.xspf`).
 
-- **Change skin**: click the logo in the bottom-right corner of the main window, or drop a
-  `.wsz` onto the window. On startup rsAmp uses, in order: `--skin`, the last skin used, then
+- **Change skin**: click **O** in the clutter bar (the small strip on the left of the main
+  window), or drop a `.wsz` onto the window. On startup rsAmp uses, in order: `--skin`, the last skin used, then
   the first `.wsz` in a `Skins` folder or next to the exe, then the built-in skin.
 - **Zoom**: Ctrl + mouse wheel (⌘ on macOS).
 - **Move**: drag any title bar or empty space on the main window.
