@@ -1,0 +1,18 @@
+# build output
+/target
+
+# skins are third-party artwork: keep them out of the repo
+*.wsz
+/Skins/
+/skins/
+
+# local test media and screenshots (root only, so assets/ is kept)
+*.mp3
+/*.png
+
+# editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
