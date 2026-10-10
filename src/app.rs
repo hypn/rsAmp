@@ -44,7 +44,6 @@ pub enum Hit {
     CButton(u8),
     Shuffle,
     Repeat,
-    Logo,
     EqBtn,
     PlBtn,
     Pos,
@@ -397,9 +396,6 @@ impl App {
         }
         if POS_SHUFFLE.contains(x, y) {
             return Hit::Shuffle;
-        }
-        if POS_LOGO.contains(x, y) {
-            return Hit::Logo;
         }
         if POS_REPEAT.contains(x, y) {
             return Hit::Repeat;
@@ -935,7 +931,7 @@ impl App {
 
     fn click(&mut self, h: Hit) {
         match h {
-            Hit::MOptions | Hit::Logo => self.open_dialog(DialogKind::LoadSkin),
+            Hit::MOptions => self.open_dialog(DialogKind::LoadSkin),
             Hit::MMinimize => self.requests.push(WinReq::Minimize),
             Hit::MShade => self.toggle_main_shade(),
             Hit::MClose => self.requests.push(WinReq::Quit),

@@ -68,7 +68,6 @@ fn hit_testing_matches_classic_layout() {
     assert_eq!(app.hit_test(20, 95), Hit::CButton(0));
     assert_eq!(app.hit_test(45, 95), Hit::CButton(1));
     assert_eq!(app.hit_test(140, 95), Hit::CButton(5));
-    assert_eq!(app.hit_test(259, 98), Hit::Logo);
     assert_eq!(app.hit_test(257, 6), Hit::MShade);
     assert_eq!(app.hit_test(267, 6), Hit::MClose);
     assert_eq!(app.hit_test(120, 62), Hit::Volume);

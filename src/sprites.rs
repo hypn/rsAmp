@@ -49,8 +49,6 @@ pub const CBUTTONS: [(i32, i32, i32, i32, i32); 6] = [
 // ---------- shufrep.bmp ----------
 pub const POS_REPEAT: Rect = r(210, 89, 28, 15);
 pub const POS_SHUFFLE: Rect = r(164, 89, 47, 15);
-/// the logo in the bottom-right corner (opens the skin dialog)
-pub const POS_LOGO: Rect = r(253, 91, 13, 15);
 pub const POS_EQ_BUTTON: Rect = r(219, 58, 23, 12);
 pub const POS_PL_BUTTON: Rect = r(242, 58, 23, 12);
 
