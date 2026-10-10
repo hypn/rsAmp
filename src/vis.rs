@@ -1,10 +1,13 @@
-//! Classic spectrum analyzer / oscilloscope.
+//! Classic spectrum analyzer (thick bars with peaks, or thin "fire" bars) / oscilloscope.
 
 use crate::gfx::{r, Image, Rect};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum VisMode {
     Spectrum,
+    /// the classic analyzer's Fire coloring + thin bands + no peaks: 75 one-pixel bars whose
+    /// colour gradient starts at each bar's tip, so every bar ends in the top colours
+    Fire,
     Oscilloscope,
     Off,
 }
@@ -12,7 +15,8 @@ pub enum VisMode {
 impl VisMode {
     pub fn next(self) -> VisMode {
         match self {
-            VisMode::Spectrum => VisMode::Oscilloscope,
+            VisMode::Spectrum => VisMode::Fire,
+            VisMode::Fire => VisMode::Oscilloscope,
             VisMode::Oscilloscope => VisMode::Off,
             VisMode::Off => VisMode::Spectrum,
         }
@@ -20,31 +24,73 @@ impl VisMode {
 }
 
 pub const NUM_BARS: usize = 19;
+pub const NUM_THIN: usize = 75;
 const FFT_N: usize = 512;
+/// the thin bands need finer bass resolution: ~21.5 Hz bins at 44.1 kHz
+const FFT_THIN: usize = 2048;
 
 pub struct Analyzer {
     pub bars: [f32; NUM_BARS],  // 0..=16
     pub peaks: [f32; NUM_BARS], // 0..=16
     peak_hold: [u32; NUM_BARS],
+    pub thin: [f32; NUM_THIN], // 0..=16
     pub wave: Vec<f32>,
     re: Vec<f32>,
     im: Vec<f32>,
     window: Vec<f32>,
+    window_thin: Vec<f32>,
+}
+
+fn hann(n: usize) -> Vec<f32> {
+    (0..n).map(|i| 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / (n - 1) as f32).cos()).collect()
+}
+
+/// Windowed FFT magnitudes of the last `window.len()` samples.
+fn spectrum(samples: &[f32], window: &[f32], re: &mut Vec<f32>, im: &mut Vec<f32>) -> Vec<f32> {
+    let n = window.len();
+    let src = &samples[samples.len() - n..];
+    re.clear();
+    re.extend(src.iter().zip(window).map(|(s, w)| s * w));
+    im.clear();
+    im.resize(n, 0.0);
+    fft(re, im);
+    (0..n / 2).map(|i| (re[i] * re[i] + im[i] * im[i]).sqrt()).collect()
+}
+
+/// Level (0..=16) of the band between fractions `a..b` of the 40 Hz–16 kHz log range.
+fn band_level(mag: &[f32], rate: u32, a: f32, b: f32) -> f32 {
+    let n = mag.len() * 2;
+    let bin_hz = rate as f32 / n as f32;
+    let (lo, hi) = (40.0f32, 16000.0f32.min(rate as f32 * 0.48));
+    let (f0, f1) = (lo * (hi / lo).powf(a), lo * (hi / lo).powf(b));
+    let (x0, x1) = (f0 / bin_hz, f1 / bin_hz);
+    let m = if x1 - x0 >= 1.0 {
+        let (i0, i1) = ((x0 as usize).max(1), (x1 as usize).min(n / 2));
+        mag[i0..i1.max(i0 + 1)].iter().fold(0.0f32, |m, &v| m.max(v))
+    } else {
+        // narrower than one FFT bin: interpolate between neighbouring bins
+        let x = ((x0 + x1) / 2.0).clamp(1.0, (n / 2 - 2) as f32);
+        let (i, t) = (x as usize, x.fract());
+        mag[i] * (1.0 - t) + mag[i + 1] * t
+    };
+    // tilt to compensate the natural high-frequency roll-off of music
+    let tilt = 1.0 + a * NUM_BARS as f32 * 0.12;
+    let db = 20.0 * (m * tilt / (n as f32 / 4.0) + 1e-9).log10();
+    ((db + 54.0) / 54.0 * 16.0).clamp(0.0, 16.0)
 }
 
 impl Analyzer {
     pub fn new() -> Self {
-        let window = (0..FFT_N)
-            .map(|i| 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / (FFT_N - 1) as f32).cos())
-            .collect();
         Analyzer {
             bars: [0.0; NUM_BARS],
             peaks: [0.0; NUM_BARS],
             peak_hold: [0; NUM_BARS],
+            thin: [0.0; NUM_THIN],
             wave: vec![0.0; 76],
             re: vec![0.0; FFT_N],
             im: vec![0.0; FFT_N],
-            window,
+            window: hann(FFT_N),
+            window_thin: hann(FFT_THIN),
         }
     }
 
@@ -56,29 +102,19 @@ impl Analyzer {
             *w = if active { samples.get(idx).copied().unwrap_or(0.0) } else { 0.0 };
         }
         let mut target = [0.0f32; NUM_BARS];
+        let mut thin_target = [0.0f32; NUM_THIN];
         if active && n >= FFT_N {
-            let src = &samples[n - FFT_N..];
-            for i in 0..FFT_N {
-                self.re[i] = src[i] * self.window[i];
-                self.im[i] = 0.0;
-            }
-            fft(&mut self.re, &mut self.im);
-            let bin_hz = rate as f32 / FFT_N as f32;
-            let (lo, hi) = (40.0f32, 16000.0f32.min(rate as f32 * 0.48));
+            let mag = spectrum(samples, &self.window, &mut self.re, &mut self.im);
             for (b, t) in target.iter_mut().enumerate() {
-                let f0 = lo * (hi / lo).powf(b as f32 / NUM_BARS as f32);
-                let f1 = lo * (hi / lo).powf((b + 1) as f32 / NUM_BARS as f32);
-                let i0 = ((f0 / bin_hz) as usize).max(1);
-                let i1 = ((f1 / bin_hz) as usize).max(i0 + 1).min(FFT_N / 2);
-                let mut m = 0.0f32;
-                for i in i0..i1 {
-                    m = m.max((self.re[i] * self.re[i] + self.im[i] * self.im[i]).sqrt());
-                }
-                // tilt to compensate the natural high-frequency roll-off of music
-                let tilt = 1.0 + b as f32 * 0.12;
-                let db = 20.0 * (m * tilt / (FFT_N as f32 / 4.0) + 1e-9).log10();
-                *t = ((db + 54.0) / 54.0 * 16.0).clamp(0.0, 16.0);
+                *t = band_level(&mag, rate, b as f32 / NUM_BARS as f32, (b + 1) as f32 / NUM_BARS as f32);
             }
+            let mag = if n >= FFT_THIN { spectrum(samples, &self.window_thin, &mut self.re, &mut self.im) } else { mag };
+            for (b, t) in thin_target.iter_mut().enumerate() {
+                *t = band_level(&mag, rate, b as f32 / NUM_THIN as f32, (b + 1) as f32 / NUM_THIN as f32);
+            }
+        }
+        for (v, &t) in self.thin.iter_mut().zip(&thin_target) {
+            *v = if t > *v { t } else { (*v - 1.2).max(t) };
         }
         for b in 0..NUM_BARS {
             // fast attack, gradual fall-off
@@ -122,6 +158,16 @@ impl Analyzer {
                     }
                 }
             }
+            VisMode::Fire => {
+                for (b, &v) in self.thin.iter().enumerate().take(area.w as usize) {
+                    let h = (v.round() as i32).min(area.h);
+                    for j in 0..h {
+                        // the gradient runs down from the tip: top colour (2) at the tip
+                        let c = colors[(2 + h - 1 - j).clamp(2, 17) as usize];
+                        dst.set(area.x + b as i32, area.y + area.h - 1 - j, c);
+                    }
+                }
+            }
             VisMode::Oscilloscope => {
                 let mid = area.h / 2;
                 let mut prev: Option<i32> = None;
@@ -153,6 +199,16 @@ impl Analyzer {
                     for j in 0..h.min(area.h) {
                         let c = colors[(17 - j * 3).clamp(2, 17) as usize];
                         dst.fill(r(area.x + b as i32 * 2, area.y + area.h - 1 - j, 1, 1), c);
+                    }
+                }
+            }
+            VisMode::Fire => {
+                for x in 0..area.w {
+                    let v = self.thin[(x as usize * NUM_THIN / area.w as usize).min(NUM_THIN - 1)];
+                    let h = (v * area.h as f32 / 16.0).round() as i32;
+                    for j in 0..h.min(area.h) {
+                        let c = colors[(2 + (h - 1 - j) * 3).clamp(2, 17) as usize];
+                        dst.set(area.x + x, area.y + area.h - 1 - j, c);
                     }
                 }
             }

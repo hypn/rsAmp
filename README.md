@@ -12,7 +12,8 @@ it onto rsAmp to get the look and feel you expect :P
 
 - **Skins**: `.wsz`/`.zip` files or extracted skin folders, with a built-in skin as fallback.
 - **Main window**: transport, seek bar, volume/balance, time display (click for remaining
-  time), scrolling title, shuffle/repeat, spectrum/oscilloscope visualizer.
+  time), scrolling title, shuffle/repeat, and a visualizer (click it to cycle: spectrum bars,
+  thin "fire" spectrum, oscilloscope, off).
 - **Equalizer**: 10 bands plus preamp, ON/AUTO, response graph, presets.
 - **Playlist**: multi-select, drag to reorder, resize, ADD/REM/SEL/MISC/LIST menus,
   `.m3u`/`.m3u8`/`.pls` playlists, plus VLC `.xspf` playlists (open only).

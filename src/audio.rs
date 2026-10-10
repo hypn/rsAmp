@@ -19,7 +19,7 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::core::units::Time;
 
-pub const VIS_LEN: usize = 1024;
+pub const VIS_LEN: usize = 2048;
 
 struct Queue {
     samples: VecDeque<f32>, // interleaved stereo at output rate
