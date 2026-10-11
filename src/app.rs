@@ -572,12 +572,7 @@ impl App {
 
     pub fn play(&mut self) {
         match self.status {
-            Status::Paused => {
-                // the classic play button restarts the track when paused
-                if let Some(c) = self.pl.current {
-                    self.play_index(c);
-                }
-            }
+            Status::Paused => self.pause(), // resume where it left off
             _ => {
                 if let Some(c) = self.pl.current.or(if self.pl.len() > 0 { Some(0) } else { None }) {
                     self.play_index(c);

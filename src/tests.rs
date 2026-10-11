@@ -99,6 +99,12 @@ fn transport_and_track_advance() {
     assert!((app.position() - p).abs() < 0.02, "position frozen while paused");
     click(&mut app, 65, 95); // unpause
     assert_eq!(app.status, Status::Playing);
+    click(&mut app, 65, 95); // pause again
+    let p = app.position();
+    click(&mut app, 45, 95); // play resumes rather than restarting
+    assert_eq!(app.status, Status::Playing);
+    assert_eq!(app.pl.current, Some(2));
+    assert!((app.position() - p).abs() < 0.02, "play should resume, not restart");
     click(&mut app, 20, 95); // previous
     assert_eq!(app.pl.current, Some(1));
     click(&mut app, 90, 95); // stop
