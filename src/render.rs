@@ -1,6 +1,6 @@
 //! Drawing of the main, equalizer and playlist windows from the skin's sprite sheets.
 
-use crate::app::{App, Drag, Hit, Status, Win, ROW_H};
+use crate::app::{App, Drag, Hit, Status, Win, PL_BASELINE, ROW_H};
 use crate::font::{draw_text, TtfFont};
 use crate::gfx::{r, Image, Rect};
 use crate::media::fmt_time;
@@ -430,7 +430,7 @@ impl App {
             let dur = e.duration.map(fmt_time).unwrap_or_default();
             match self.ttf.as_mut() {
                 Some(f) => {
-                    let row = PlRowText { label, dur, left: list.x + 2, right: list.x + list.w - 3, baseline: y + 10, color, clip, hole: None };
+                    let row = PlRowText { label, dur, left: list.x + 2, right: list.x + list.w - 3, baseline: y + PL_BASELINE, color, clip, hole: None };
                     if self.text_scale == 1.0 {
                         row.draw(f, img, 1.0);
                     } else {
@@ -442,8 +442,8 @@ impl App {
                     // no TrueType font: fall back to the skin's bitmap font
                     let dw = dur.chars().count() as i32 * 5;
                     let dx = list.x + list.w - dw - 3;
-                    draw_text_colored(img, s, list.x + 2, y + 4, &label.to_uppercase(), r(clip.x, clip.y, (dx - 4 - clip.x).max(0), clip.h), color);
-                    draw_text_colored(img, s, dx, y + 4, &dur, clip, color);
+                    draw_text_colored(img, s, list.x + 2, y + (ROW_H - 6) / 2, &label.to_uppercase(), r(clip.x, clip.y, (dx - 4 - clip.x).max(0), clip.h), color);
+                    draw_text_colored(img, s, dx, y + (ROW_H - 6) / 2, &dur, clip, color);
                 }
             }
         }

@@ -17,7 +17,11 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, Instant};
 
-pub const ROW_H: i32 = 13;
+/// Playlist row height and TrueType font size in skin pixels (both scaled with the zoom).
+/// The text baseline sits `PL_BASELINE` pixels below the top of its row.
+pub const ROW_H: i32 = 11;
+pub const PL_FONT_PX: f32 = 9.0;
+pub const PL_BASELINE: i32 = 9;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Win {
@@ -189,7 +193,7 @@ impl App {
         audio.set_volume(cfg.volume);
         audio.set_balance(cfg.balance);
         audio.set_eq(&eq);
-        let ttf = TtfFont::load(&skin.pl.font, 10.0);
+        let ttf = TtfFont::load(&skin.pl.font, PL_FONT_PX);
 
         // background metadata prober
         let (probe_tx, job_rx) = channel::<PathBuf>();
@@ -1254,7 +1258,7 @@ impl App {
 
     /// The playlist font at `f` times its normal size.
     pub fn zoomed_font(&mut self, f: f64) -> Option<&mut TtfFont> {
-        let px = (10.0 * f) as f32;
+        let px = PL_FONT_PX * f as f32;
         if self.ttf_zoomed.as_ref().map(|t| t.px) != Some(px) {
             self.ttf_zoomed = self.ttf.as_ref().map(|t| t.resized(px));
         }
@@ -1265,7 +1269,7 @@ impl App {
         match Skin::load(&path) {
             Ok(s) => {
                 if s.pl.font != self.skin.pl.font || self.ttf.is_none() {
-                    self.ttf = TtfFont::load(&s.pl.font, 10.0);
+                    self.ttf = TtfFont::load(&s.pl.font, PL_FONT_PX);
                     self.ttf_zoomed = None;
                 }
                 if s.missing.is_empty() {

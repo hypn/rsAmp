@@ -1,7 +1,7 @@
 //! Behavioural tests driving the app through simulated mouse input (audio runs on the
 //! null output when no device is present, so playback timing is real-time).
 
-use crate::app::{App, Hit, Status};
+use crate::app::{App, Hit, Status, ROW_H};
 use crate::config::Config;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -183,7 +183,7 @@ fn playlist_selection_menus_and_resize() {
     let files = fixture("playlist", &[0.2, 0.2, 0.2, 0.2]);
     let mut app = app_with(files);
     let top = app.layout().pl.unwrap().y;
-    let row_y = |r: i32| top + 20 + r * 13 + 6;
+    let row_y = |r: i32| top + 20 + r * ROW_H + ROW_H / 2;
     click(&mut app, 50, row_y(1));
     assert!(app.pl.entries[1].selected);
     app.mouse_down(50, row_y(3), false, true); // shift-click range
